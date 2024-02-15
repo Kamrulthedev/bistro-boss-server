@@ -6,13 +6,10 @@ const dotenv = require('dotenv')
 const port = process.env.PORT || 5000;
 
 
-
-
 // middlwerar
 app.use(cors());
 app.use(express.json());
 
-console.log(process.env.DB_USER, process.env.DB_PASS)
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.kqeap4x.mongodb.net/?retryWrites=true&w=majority`;
@@ -32,6 +29,7 @@ async function run() {
     await client.connect();
     const menuCollection = client.db("BistroDB").collection("menu")
     const reviewsCollection = client.db("BistroDB").collection("reviews")
+    const CardsCollection = client.db("BistroDB").collection("Cards")
 
 
     app.get('/menu', async(req, res)=>{
@@ -42,6 +40,14 @@ async function run() {
     app.get('/reviews', async(req, res)=>{
         const result = await reviewsCollection.find().toArray();
         res.send(result);
+    })
+
+    // Cards Collection
+    app.get('Cards', async(req, res)=>{
+      const CardItems = req.body;
+      const result  = await CardsCollection.insertOne(CardItems);
+      res.send(result);
+      
     })
 
 
@@ -57,15 +63,12 @@ async function run() {
 }
 run().catch(console.dir);
 
-
-
-
- 
 app.get('/', (req, res) => {
     res.send('Boss is sitting')
 });
 app.listen(port, ()=>{
     console.log(` Bistro Boss is Sitting on port ${port}`)
 } )
+
 
 
