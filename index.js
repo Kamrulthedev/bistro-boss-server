@@ -27,31 +27,34 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const menuCollection = client.db("BistroDB").collection("menu")
-    const reviewsCollection = client.db("BistroDB").collection("reviews")
-    const CardsCollection = client.db("BistroDB").collection("Cards")
+    const menuCollection = client.db("BistroDB").collection("menu");
+    const reviewsCollection = client.db("BistroDB").collection("reviews");
+    const cardsCollection = client.db("BistroDB").collection("cards");
 
 
-    app.get('/menu', async(req, res)=>{
-        const result = await menuCollection.find().toArray();
-        res.send(result);
-    })
+    app.get('/menu', async (req, res) => {
+      const result = await menuCollection.find().toArray();
+      res.send(result);
+    });
 
-    app.get('/reviews', async(req, res)=>{
-        const result = await reviewsCollection.find().toArray();
-        res.send(result);
-    })
+    app.get('/reviews', async (req, res) => {
+      const result = await reviewsCollection.find().toArray();
+      res.send(result);
+    });
 
     // Cards Collection
-    app.get('Cards', async(req, res)=>{
-      const CardItems = req.body;
-      const result  = await CardsCollection.insertOne(CardItems);
+    app.get('/cards', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await cardsCollection.find().toArray();
       res.send(result);
-      
-    })
+    });
 
-
-
+    app.post('/cards', async (req, res) => {
+      const CardItems = req.body;
+      const result = await cardsCollection.insertOne(CardItems);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -64,11 +67,11 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-    res.send('Boss is sitting')
+  res.send('Boss is sitting')
 });
-app.listen(port, ()=>{
-    console.log(` Bistro Boss is Sitting on port ${port}`)
-} )
+app.listen(port, () => {
+  console.log(` Bistro Boss is Sitting on port ${port}`)
+});
 
 
 
