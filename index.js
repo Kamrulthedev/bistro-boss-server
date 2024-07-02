@@ -1,203 +1,87 @@
-const cors = require('cors');
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const cors = require("cors");
+const express = require("express");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-require('dotenv').config()
-const dotenv = require('dotenv');
+require("dotenv").config();
+const dotenv = require("dotenv");
 const port = process.env.PORT || 5000;
 
-
 // middlwerar
-app.use(cors());
+app.use(cors({}));
 app.use(express.json());
 
-
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.kqeap4x.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb://localhost:27017`;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const menuCollection = client.db("BistroDB").collection("menu");
-    const reviewsCollection = client.db("BistroDB").collection("reviews");
-    const cardsCollection = client.db("BistroDB").collection("cards");
-    const userCollection = client.db("BistroDB").collection("users");
-
-
-    //jwt related Api
-
-    app.post('/jwt', async (req, res) => {
-      const user = req.body;
-      const token = jwt.sign(user, process.env.DB_TOKEN, {
-        expiresIn: '1h'
-      });
-      res.send({ token });
-    });
-
-
-    // Middleware to verify JWT token
-    const verifyToken = (req, res, next) => {
-      console.log('inside verify token ', req.headers.authorization);
-      if (!req.headers.authorization) {
-        return res.status(401).send({ message: 'Unauthorized access' });
-      }
-      const token = req.headers.authorization.split(' ')[1];
-      jwt.verify(token, process.env.DB_TOKEN, (err, decoded) => {
-        if (err) {
-          return res.status(401).send({ message: 'Unauthorized access' });
-        }
-        req.decoded = decoded;
-        next();
-      });
-    };
-
-
-
-
-    //user verify admin and verifyToken
-    const verifyAdmin = async (req, res, next) => {
-      const email = req.decoded.email;
-      const query = { email: email };
-      const user = await userCollection.findOne(query);
-      const isAdmin = user?.role === 'admin';
-      if (!isAdmin) {
-
-        return res.status(403).send({ message: 'forbidden access' })
-      }
-      next()
-    };
-
-    // users related api 
-    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
-      const result = await userCollection.find().toArray();
-      res.send(result);
-    });
-
-    app.post('/users', async (req, res) => {
-      const user = req.body;
-      // insert email if user doesnt exists :
-      // you can do this many (1. email unique , 2. upsert 3. simple checking)      
-      const query = { email: user.email }
-      const existingUser = await userCollection.findOne(query)
-      if (existingUser) {
-        return res.send({ message: 'user is alredy exists', insertedId: null })
-      }
-      const result = await userCollection.insertOne(user);
-      res.send(result);
-    });
-
-
-    app.get('/users/admin/:email', verifyToken, async (req, res) => {
-      const email = req.params.email;
-      if (email !== req.decoded.email) {
-        return res.status(403).send({ message: ' forbidden acces' })
-      }
-      const query = { email: email };
-      const user = await userCollection.findOne(query);
-      let admin = false;
-      if (user) {
-        admin = user?.role === 'admin';
-      }
-      res.send({ admin });
-    });
-
-    app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) }
-      const updatedDoc = {
-        $set: {
-          role: 'admin'
-        }
-      }
-      const result = await userCollection.updateOne(filter, updatedDoc)
-      res.send(result)
-    });
-
-
-    app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await userCollection.deleteOne(query);
-      res.send(result);
-    });
-
-    app.get('/menu', async (req, res) => {
-      const result = await menuCollection.find().toArray();
-      res.send(result);
-    });
-    
-    app.get('/menu/:id', async(req, res)=>{
-      const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
-      const result = await menuCollection.findOne(query);
-      res.send(result);
-    });
-
-    app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
-      const items = req.body;
-      const result = await menuCollection.insertOne(items);
-      res.send(result);
-    });
-
-
-    app.delete('/menu/:id',verifyToken,verifyAdmin, async(req, res)=>{
-      const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
-      const result = await menuCollection.deleteOne(query);
-      res.send(result);
-    });
-  
-    app.get('/reviews', async (req, res) => {
-      const result = await reviewsCollection.find().toArray();
-      res.send(result);
-    });
+    const todoCollection = client.db("Todo").collection("Task");
 
     // Cards Collection
-    app.get('/cards', async (req, res) => {
+    app.get("/tasks", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
-      const result = await cardsCollection.find(query).toArray();
+      const result = await todoCollection.find(query).toArray();
       res.send(result);
     });
 
-    app.post('/cards', async (req, res) => {
-      const CardItems = req.body;
-      const result = await cardsCollection.insertOne(CardItems);
-      res.send(result);
-    });
-
-    app.delete('/cards/:id', async (req, res) => {
+    app.get("/tasks/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await cardsCollection.deleteOne(query)
+      const result = await todoCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    app.post("/task", async (req, res) => {
+      const TodoItems = req.body;
+      const result = await todoCollection.insertOne(TodoItems);
+      res.send(result);
+    });
+
+    app.delete("/task/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await todoCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    app.put("/task/:id", async (req, res) => {
+      const id = req.params.id;
+      const todoData = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const UpdateDoc = {
+        $set: {
+          title: todoData.title,
+          description: todoData.description,
+          status: todoData.status,
+          property: todoData.property,
+          datetime: todoData.datetime
+        },
+      };
+      const result = await todoCollection.updateOne(filter, UpdateDoc);
       res.send(result);
     });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
   }
-};
+}
 
 run().catch(console.dir);
 
-app.get('/', (req, res) => {
-  res.send('Boss is sitting')
+app.get("/", (req, res) => {
+  res.send("My Todo Start !!!");
 });
 app.listen(port, () => {
-  console.log(` Bistro Boss is Sitting on port ${port}`)
+  console.log(`My Todo start !!${port}`);
 });
-
-
-
