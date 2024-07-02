@@ -1,7 +1,7 @@
 const cors = require('cors');
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, ConnectionPoolClosedEvent } = require('mongodb');
 const app = express();
 require('dotenv').config()
 const dotenv = require('dotenv');
@@ -9,8 +9,17 @@ const port = process.env.PORT || 5000;
 
 
 // middlwerar
-app.use(cors());
+app.use(cors({
+  origin:[
+    'https://',
+    'https://www.bistro-bos.com/',
+    'https://bistro-boss-38525.web.app/',
+    'https://bistro-boss-38525.firebaseapp.com/'
+  ]
+}));
 app.use(express.json());
+
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.kqeap4x.mongodb.net/?retryWrites=true&w=majority`;
@@ -129,15 +138,15 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/menu', async (req, res) => {
-      const result = await menuCollection.find().toArray();
-      res.send(result);
-    });
-    
-    app.get('/menu/:id', async(req, res)=>{
+    app.get('/menu/:id',  async(req, res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)};
       const result = await menuCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.get('/menu', async (req, res) => {
+      const result = await menuCollection.find().toArray();
       res.send(result);
     });
 
@@ -145,8 +154,7 @@ async function run() {
       const items = req.body;
       const result = await menuCollection.insertOne(items);
       res.send(result);
-    });
-
+    }); 
 
     app.delete('/menu/:id',verifyToken,verifyAdmin, async(req, res)=>{
       const id = req.params.id;
